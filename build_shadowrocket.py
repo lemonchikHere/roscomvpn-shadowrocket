@@ -40,6 +40,17 @@ POLICIES = {"DIRECT", "PROXY", "REJECT", "REJECT-DROP", "REJECT-NO-DROP"}
 REPO_RAW_BASE = "https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main"
 POLICIES.add(PROXY_POLICY)
 
+TELEGRAM_IP_RANGES = (
+    "91.108.4.0/22",
+    "91.108.8.0/22",
+    "91.108.12.0/22",
+    "91.108.16.0/22",
+    "91.108.20.0/22",
+    "91.108.56.0/22",
+    "109.239.140.0/24",
+    "149.154.160.0/20",
+)
+
 
 @dataclass(frozen=True)
 class Step:
@@ -59,12 +70,13 @@ ORDER = [
     Step("geosite", "category-ads", BLOCK_POLICY, f"{GEOSITE_BASE}/category-ads"),
     Step("geosite", "win-spy", BLOCK_POLICY, f"{GEOSITE_BASE}/win-spy"),
     Step("geosite", "torrent-domains", "DIRECT", f"{GEOSITE_BASE}/torrent"),
-    Step("geosite", "google-play", PROXY_POLICY, f"{GEOSITE_BASE}/google-play"),
-    Step("geosite", "twitch-ads", PROXY_POLICY, f"{GEOSITE_BASE}/twitch-ads"),
-    Step("geosite", "youtube", PROXY_POLICY, f"{GEOSITE_BASE}/youtube"),
-    Step("geosite", "telegram", PROXY_POLICY, f"{GEOSITE_BASE}/telegram"),
-    Step("geosite", "github", PROXY_POLICY, f"{GEOSITE_BASE}/github"),
-    Step("shadowrocket-list", "discord-macos-addon", PROXY_POLICY, SHADOWROCKET_DISCORD_URL),
+    Step("geosite", "google-play", PROXY_POLICY, f"{GEOSITE_BASE}/google-play", remote_options=(PROXY_OPTION,)),
+    Step("geosite", "twitch-ads", PROXY_POLICY, f"{GEOSITE_BASE}/twitch-ads", remote_options=(PROXY_OPTION,)),
+    Step("geosite", "youtube", PROXY_POLICY, f"{GEOSITE_BASE}/youtube", remote_options=(PROXY_OPTION,)),
+    Step("geosite", "telegram", PROXY_POLICY, f"{GEOSITE_BASE}/telegram", remote_options=(PROXY_OPTION,)),
+    Step("static", "telegram-ips", PROXY_POLICY, no_resolve=True),
+    Step("geosite", "github", PROXY_POLICY, f"{GEOSITE_BASE}/github", remote_options=(PROXY_OPTION,)),
+    Step("shadowrocket-list", "discord-macos-addon", PROXY_POLICY, SHADOWROCKET_DISCORD_URL, remote_options=(PROXY_OPTION,)),
     Step("geosite", "epicgames", "DIRECT", f"{GEOSITE_BASE}/epicgames"),
     Step("geosite", "origin", "DIRECT", f"{GEOSITE_BASE}/origin"),
     Step("geosite", "riot", "DIRECT", f"{GEOSITE_BASE}/riot"),
@@ -87,11 +99,12 @@ GENERAL = """[General]
 bypass-system = true
 skip-proxy = 127.0.0.1,localhost,*.local,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
 bypass-tun = 10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,172.16.0.0/12,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,192.168.0.0/16,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24,224.0.0.0/3
-dns-server = https://77.88.8.8/dns-query,https://8.8.8.8/dns-query
-fallback-dns-server = https://8.8.8.8/dns-query,tls://8.8.8.8
+dns-server = system,77.88.8.8,1.1.1.1,8.8.8.8
+fallback-dns-server = system,1.1.1.1,8.8.8.8
 ipv6 = false
 prefer-ipv6 = false
 private-ip-answer = true
+dns-direct-fallback-proxy = true
 
 """
 
@@ -211,6 +224,11 @@ def rules_for_step(step: Step, include_process: bool, skipped: list[str]) -> lis
         return [f"IP-CIDR,::/0,{BLOCK_POLICY},no-resolve"]
     if step.name == "quic-udp-443":
         return [QUIC_BLOCK_RULE]
+    if step.name == "telegram-ips":
+        rules = [f"IP-CIDR,{cidr},{step.policy}" for cidr in TELEGRAM_IP_RANGES]
+        if step.no_resolve:
+            return [f"{rule},no-resolve" for rule in rules]
+        return rules
     if not step.url:
         raise ValueError(f"Step {step.name} has no URL")
     text = fetch(step.url)
