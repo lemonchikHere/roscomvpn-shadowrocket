@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoscomVPN для Shadowrocket — готовый routing-only конфиг</title>
+  <meta name="description" content="Русская страница основного Shadowrocket-конфига RoscomVPN: RU/BY и локальные сервисы напрямую, внешний трафик через выбранный Proxy.">
+  <meta property="og:title" content="RoscomVPN для Shadowrocket">
+  <meta property="og:description" content="Готовая маршрутизация RoscomVPN для Shadowrocket: основной конфиг, установка, помощь и реальные VPN/proxy варианты.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0b1020">
+  <link rel="canonical" href="https://lemonchikhere.github.io/roscomvpn-shadowrocket/">
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="%230b1020"/><path d="M17 38c8-15 22-15 30 0" fill="none" stroke="%2387f7b5" stroke-width="5" stroke-linecap="round"/><path d="M21 25h22" stroke="%23ffffff" stroke-width="5" stroke-linecap="round"/></svg>'>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --bg-soft: #eaf0ff;
+      --ink: #0b1020;
+      --muted: #657084;
+      --panel: rgba(255, 255, 255, .86);
+      --panel-solid: #ffffff;
+      --line: #dbe2ef;
+      --line-strong: #bac6d8;
+      --green: #16824a;
+      --green-soft: #e7f8ee;
+      --blue: #285fff;
+      --blue-soft: #eaf0ff;
+      --red: #c23a35;
+      --red-soft: #fff0ee;
+      --amber: #a46200;
+      --amber-soft: #fff7e8;
+      --code: #101624;
+      --code-muted: #aeb8c7;
+      --shadow: 0 24px 70px rgba(20, 32, 56, .12);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      overflow-x: hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(40, 95, 255, .18), transparent 34rem),
+        radial-gradient(circle at 80% 10%, rgba(22, 130, 74, .14), transparent 30rem),
+        linear-gradient(180deg, #fbfcff 0%, var(--bg) 48%, #eef3fb 100%);
+      color: var(--ink);
+    }
+
+    a { color: inherit; }
+    button, input { font: inherit; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .95em; }
+
+    .shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(251, 252, 255, .82);
+      border-bottom: 1px solid rgba(219, 226, 239, .8);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      font-weight: 820;
+      text-decoration: none;
+      letter-spacing: -.02em;
+    }
+
+    .mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--ink);
+      color: #fff;
+      box-shadow: inset 0 -6px 14px rgba(255,255,255,.12), 0 10px 24px rgba(11,16,32,.18);
+      flex: 0 0 auto;
+    }
+
+    .mark svg { width: 24px; height: 24px; }
+
+    .navlinks {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .navlinks a, .button {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 15px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .78);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 760;
+      cursor: pointer;
+      transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+      white-space: nowrap;
+    }
+
+    .navlinks a:hover, .button:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: 0 12px 26px rgba(20,32,56,.08); }
+    .button.primary { background: var(--ink); border-color: var(--ink); color: #fff; box-shadow: 0 16px 34px rgba(11,16,32,.22); }
+    .button.green { background: var(--green); border-color: var(--green); color: #fff; }
+    .button.ghost { background: transparent; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.06fr) minmax(340px, .76fr);
+      gap: 24px;
+      align-items: stretch;
+      padding: 52px 0 28px;
+    }
+
+    .card {
+      border: 1px solid rgba(219, 226, 239, .92);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero-copy {
+      min-height: 560px;
+      padding: 34px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-copy::after {
+      content: "";
+      position: absolute;
+      inset: auto -12% -38% 40%;
+      height: 360px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(40,95,255,.16), transparent 62%);
+      pointer-events: none;
+    }
+
+    .eyebrow, .pill {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,.72);
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .pulse { width: 9px; height: 9px; border-radius: 999px; background: var(--green); box-shadow: 0 0 0 7px rgba(22,130,74,.13); }
+
+    h1 {
+      margin: 28px 0 0;
+      max-width: 780px;
+      font-size: clamp(42px, 6vw, 72px);
+      line-height: .93;
+      letter-spacing: -.06em;
+    }
+
+    .lead {
+      margin: 24px 0 0;
+      max-width: 760px;
+      color: #3c4658;
+      font-size: 19px;
+      line-height: 1.65;
+    }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; align-items: center; }
+    .fallback { margin-top: 14px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .fallback a { color: var(--blue); font-weight: 760; }
+
+    .metrics {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 32px;
+    }
+
+    .metric { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.68); }
+    .metric strong { display: block; font-size: 25px; line-height: 1.05; letter-spacing: -.03em; }
+    .metric span { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.35; }
+
+    .console {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: var(--code);
+      color: #eef4ff;
+      box-shadow: var(--shadow);
+    }
+
+    .console-head { min-height: 50px; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,.1); color: var(--code-muted); font-size: 13px; }
+    .console-head span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dot { width: 10px; height: 10px; border-radius: 999px; background: #87f7b5; flex: 0 0 auto; }
+    .dot.red { background: #ff6d65; }
+    .dot.amber { background: #ffc857; margin-right: 8px; }
+    .console pre { margin: 0; padding: 24px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.72; flex: 1; }
+    .token-green { color: #87f7b5; }
+    .token-blue { color: #9bb8ff; }
+    .token-red { color: #ffaaa3; }
+    .token-muted { color: var(--code-muted); }
+
+    .section { padding: 30px 0; }
+    .section-title { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 16px; }
+    h2 { margin: 0; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.04; letter-spacing: -.04em; }
+    h3 { margin: 0 0 10px; font-size: 22px; letter-spacing: -.03em; }
+    .section-title p, .panel p, .route-card p, .notice p, .promo p, .step p { margin: 0; color: var(--muted); line-height: 1.62; }
+    .panel { padding: 24px; }
+
+    .copy-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: stretch; }
+    .urlbox { min-height: 54px; display: flex; align-items: center; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 16px; background: #f3f6fb; padding: 13px 15px; color: #273246; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.5; }
+    .status { min-height: 22px; margin-top: 12px; color: var(--green); font-size: 14px; font-weight: 760; }
+
+    .routes, .steps, .info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .route-card, .step, .notice, .promo { min-width: 0; border: 1px solid var(--line); border-radius: 22px; background: var(--panel-solid); padding: 22px; }
+    .route-card { position: relative; overflow: hidden; min-height: 210px; }
+    .route-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: var(--green); }
+    .route-card.proxy::before { background: var(--blue); }
+    .route-card.block::before { background: var(--red); }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .tag { border: 1px solid var(--line); border-radius: 999px; padding: 6px 9px; color: var(--muted); font-size: 12px; font-weight: 760; background: #fff; }
+
+    .step { background: rgba(255,255,255,.82); }
+    .step-num { width: 34px; height: 34px; display: grid; place-items: center; margin-bottom: 14px; border-radius: 12px; background: var(--ink); color: #fff; font-weight: 820; }
+
+    .promo {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      background:
+        radial-gradient(circle at 0 0, rgba(22,130,74,.17), transparent 22rem),
+        linear-gradient(135deg, #ffffff 0%, #eef9f3 100%);
+      border-color: rgba(22,130,74,.24);
+    }
+    .promo h2 { font-size: clamp(26px, 3vw, 36px); }
+    .promo .actions { margin-top: 18px; }
+    .promo-badge { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--green); font-weight: 820; }
+    .promo-visual { width: 150px; height: 150px; border-radius: 34px; display: grid; place-items: center; background: #0f1f18; color: #87f7b5; box-shadow: inset 0 -18px 40px rgba(255,255,255,.08), 0 18px 44px rgba(22,130,74,.18); }
+    .promo-visual svg { width: 88px; height: 88px; }
+
+    .file-table { width: 100%; border-collapse: collapse; overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: var(--panel-solid); box-shadow: 0 16px 42px rgba(20,32,56,.06); }
+    .file-table th, .file-table td { padding: 16px 18px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; line-height: 1.55; }
+    .file-table tr:last-child td { border-bottom: 0; }
+    .file-table th { color: var(--muted); font-size: 13px; font-weight: 820; }
+    .recommended { color: var(--green); font-weight: 820; }
+
+    .faq { display: grid; gap: 10px; }
+    details { border: 1px solid var(--line); border-radius: 18px; background: var(--panel-solid); overflow: hidden; }
+    summary { cursor: pointer; padding: 18px 20px; font-weight: 820; }
+    details p { margin: 0; padding: 0 20px 18px; color: var(--muted); line-height: 1.62; }
+
+    .notice { background: var(--amber-soft); border-color: rgba(164,98,0,.24); }
+    .links-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
+    footer { padding: 34px 0 46px; color: var(--muted); font-size: 14px; }
+    footer a { font-weight: 760; }
+
+    .reveal { opacity: 0; transform: translateY(16px); transition: opacity .55s ease, transform .55s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 940px) {
+      .hero, .routes, .steps, .info-grid, .copy-panel, .promo { grid-template-columns: 1fr; }
+      .hero-copy { min-height: auto; }
+      .metrics { grid-template-columns: 1fr; }
+      .section-title { align-items: start; flex-direction: column; }
+      .promo-visual { width: 100%; height: 110px; border-radius: 24px; }
+    }
+
+    @media (max-width: 600px) {
+      .shell { width: min(100% - 24px, 1120px); }
+      .nav { align-items: start; flex-direction: column; padding: 12px 0; }
+      .navlinks { justify-content: start; }
+      .hero { padding-top: 28px; }
+      .hero-copy, .panel, .route-card, .step, .notice, .promo { padding: 18px; border-radius: 18px; }
+      .lead { font-size: 16px; }
+      .file-table { display: block; overflow-x: auto; border-radius: 18px; }
+      .button { width: 100%; }
+      .navlinks .button, .navlinks a { width: auto; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .button, .reveal { transition: none; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <nav class="shell nav" aria-label="Главная навигация">
+      <a class="brand" href="#top" aria-label="RoscomVPN Shadowrocket">
+        <span class="mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M8 20c5-9 11-9 16 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <path d="M10 12h12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span>RoscomVPN Shadowrocket</span>
+      </a>
+      <div class="navlinks">
+        <a href="#install">Установка</a>
+        <a href="#routing">Что внутри</a>
+        <a href="#vpn">VPN</a>
+        <a href="#report">Репорт</a>
+        <a href="https://github.com/lemonchikHere/roscomvpn-shadowrocket">GitHub</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="shell hero">
+      <div class="card hero-copy reveal">
+        <div>
+          <span class="eyebrow"><span class="pulse"></span> Основной файл: roscomvpn-shadowrocket.conf</span>
+          <h1>Маршрутизация RoscomVPN для Shadowrocket.</h1>
+          <p class="lead">Готовая маршрутизация RoscomVPN для Shadowrocket: RU/BY и локальные сервисы идут напрямую, YouTube, Telegram, Instagram, GitHub, Discord и остальной внешний трафик идут через выбранный Proxy.</p>
+          <div class="actions">
+            <button class="button primary" type="button" data-copy="https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf">Скопировать конфиг</button>
+            <a class="button ghost" href="https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf">Открыть raw</a>
+            <a class="button ghost" href="https://github.com/lemonchikHere/roscomvpn-shadowrocket">Репозиторий</a>
+          </div>
+          <p class="fallback">Если копирование в браузере заблокировано, открой <a href="https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf">raw config</a> и скопируй URL вручную.</p>
+        </div>
+        <div class="metrics" aria-label="Сводка">
+          <div class="metric"><strong>117</strong><span>строк в легком основном профиле</span></div>
+          <div class="metric"><strong>30</strong><span>rule-set файлов подтягиваются по URL</span></div>
+          <div class="metric"><strong>Proxy</strong><span>используй свой сервер или VPN-подписку</span></div>
+        </div>
+      </div>
+
+      <div class="console reveal" aria-label="Превью основного конфига">
+        <div class="console-head">
+          <span class="dot red"></span><span class="dot amber"></span><span class="dot"></span>
+          <span>roscomvpn-shadowrocket.conf</span>
+        </div>
+        <pre><code><span class="token-muted">[General]</span>
+dns-server = system,77.88.8.8,1.1.1.1,8.8.8.8
+fallback-dns-server = system,1.1.1.1,8.8.8.8
+ipv6 = false
+
+<span class="token-muted">[Rule]</span>
+RULE-SET,.../private-ips.list,<span class="token-green">DIRECT</span>
+IP-CIDR,::/0,<span class="token-red">REJECT-DROP</span>,no-resolve
+AND,((PROTOCOL,UDP),(DST-PORT,443)),REJECT-NO-DROP
+
+RULE-SET,.../instagram.list,<span class="token-blue">Proxy</span>,force-remote-dns
+RULE-SET,.../facebook.list,<span class="token-blue">Proxy</span>,force-remote-dns
+RULE-SET,.../youtube.list,<span class="token-blue">Proxy</span>,force-remote-dns
+RULE-SET,.../telegram.list,<span class="token-blue">Proxy</span>,force-remote-dns
+RULE-SET,.../telegram-ips.list,<span class="token-blue">Proxy</span>
+RULE-SET,.../github.list,<span class="token-blue">Proxy</span>,force-remote-dns
+RULE-SET,.../discord-macos-addon.list,<span class="token-blue">Proxy</span>,force-remote-dns
+
+RULE-SET,.../category-ru.list,<span class="token-green">DIRECT</span>
+RULE-SET,.../direct-ips.list,<span class="token-green">DIRECT</span>
+FINAL,<span class="token-blue">Proxy</span></code></pre>
+      </div>
+    </section>
+
+    <section id="install" class="shell section reveal">
+      <div class="section-title">
+        <h2>Скопируй основной конфиг</h2>
+        <p>Для обычного использования нужен только <code>roscomvpn-shadowrocket.conf</code>. Отладочный <code>expanded</code> не ставь как основной профиль.</p>
+      </div>
+      <div class="card panel">
+        <div class="copy-panel">
+          <div class="urlbox" id="config-url">https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf</div>
+          <button class="button primary" type="button" data-copy="https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf">Скопировать конфиг</button>
+        </div>
+        <div class="status" id="copy-status" role="status" aria-live="polite"></div>
+        <p>Fallback: <a href="https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf">открыть raw config</a>, затем скопировать адрес из строки браузера.</p>
+      </div>
+    </section>
+
+    <section class="shell section reveal" aria-labelledby="install-steps-title">
+      <div class="section-title">
+        <h2 id="install-steps-title">Как установить</h2>
+        <p>Профиль содержит только маршрутизацию. Proxy/VPN-сервер выбирается отдельно в Shadowrocket.</p>
+      </div>
+      <div class="steps">
+        <article class="step"><div class="step-num">1</div><h3>Импортируй URL</h3><p>Открой Shadowrocket и добавь основной raw URL этого конфига.</p></article>
+        <article class="step"><div class="step-num">2</div><h3>Включи Rule</h3><p>Поставь режим маршрутизации <code>Rule</code>, чтобы правила DIRECT/Proxy применялись по порядку.</p></article>
+        <article class="step"><div class="step-num">3</div><h3>Выбери Proxy</h3><p>Назначь свой рабочий сервер или подписку как активный <code>Proxy</code>. Без него это не VPN.</p></article>
+      </div>
+    </section>
+
+    <section id="vpn" class="shell section reveal">
+      <div class="promo">
+        <div>
+          <div class="promo-badge">Рекомендуемый companion-сервис</div>
+          <h2>Нужен реальный Proxy/VPN? Попробуй Foli VPN.</h2>
+          <p>Этот репозиторий — routing-only: он решает, куда отправлять трафик, но не содержит серверов, ключей или подписок. Foli VPN можно использовать как реальный VPN/proxy слой вместе с этим Shadowrocket-конфигом.</p>
+          <div class="actions">
+            <a class="button green" href="https://t.me/FoliVpnBot?start=shadowrocket_roscomvpn">Открыть Telegram-бота</a>
+            <a class="button" href="https://folivpn.org/">Сайт Foli VPN</a>
+          </div>
+        </div>
+        <div class="promo-visual" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none">
+            <path d="M60 13l36 14v28c0 24-14 41-36 52-22-11-36-28-36-52V27l36-14z" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/>
+            <path d="M40 63l13 13 29-34" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section id="routing" class="shell section reveal">
+      <div class="section-title">
+        <h2>Что внутри</h2>
+        <p>Главная логика: локальное и RU/BY — напрямую, нужные внешние сервисы и fallback — через выбранный Proxy.</p>
+      </div>
+      <div class="routes">
+        <article class="route-card">
+          <h3>DIRECT</h3>
+          <p>Приватные сети, RU/BY IP, российские сервисы, банки, Apple, Microsoft, Steam, Epic, Riot, Escape from Tarkov, Faceit, Twitch, Pinterest, torrent-клиенты и локальные домены.</p>
+          <div class="tag-row"><span class="tag">RU/BY</span><span class="tag">Банки</span><span class="tag">Apple</span><span class="tag">Steam</span></div>
+        </article>
+        <article class="route-card proxy">
+          <h3>Proxy</h3>
+          <p>YouTube, Telegram, Instagram, Facebook/Meta, GitHub, Google Play, Twitch ads, Discord и весь остальной трафик, который не совпал с direct-правилами.</p>
+          <div class="tag-row"><span class="tag">YouTube</span><span class="tag">Telegram</span><span class="tag">Instagram</span><span class="tag">GitHub</span></div>
+        </article>
+        <article class="route-card block">
+          <h3>REJECT-DROP</h3>
+          <p>Рекламные категории, Windows telemetry и IPv6 leak guard. QUIC UDP/443 также контролируется для более предсказуемого обхода через Proxy.</p>
+          <div class="tag-row"><span class="tag">Ads</span><span class="tag">Telemetry</span><span class="tag">IPv6 guard</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="files" class="shell section reveal">
+      <div class="section-title">
+        <h2>Файлы проекта</h2>
+        <p>Основным публичным профилем остается только легкий RULE-SET файл.</p>
+      </div>
+      <table class="file-table">
+        <thead><tr><th>Файл</th><th>Назначение</th></tr></thead>
+        <tbody>
+          <tr><td><code>roscomvpn-shadowrocket.conf</code></td><td><span class="recommended">Основной импортируемый профиль.</span> Ставь его для обычного использования.</td></tr>
+          <tr><td><code>rules/*.list</code></td><td>Удаленные rule-set списки, которые основной профиль подтягивает по URL.</td></tr>
+          <tr><td><code>roscomvpn-shadowrocket-expanded.conf</code></td><td>Большой отладочный профиль для проверки парсинга. Не продвигается как основной.</td></tr>
+          <tr><td><code>roscomvpn-shadowrocket-with-process.conf</code></td><td>Отладочный вариант с process rules, только если конкретная версия Shadowrocket их принимает.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="report" class="shell section reveal">
+      <div class="section-title">
+        <h2>Как репортить проблему</h2>
+        <p>Чем точнее входные данные, тем быстрее можно поправить routing.</p>
+      </div>
+      <div class="info-grid">
+        <article class="step"><h3>Что приложить</h3><p>Версию Shadowrocket, платформу, импортированный URL/файл и короткий кусок PacketTunnel-лога рядом с ошибкой.</p></article>
+        <article class="step"><h3>Где писать</h3><p>Создай issue в репозитории и укажи приложение или домен, который работает не так.</p><div class="links-row"><a class="button" href="https://github.com/lemonchikHere/roscomvpn-shadowrocket/issues">Открыть issues</a></div></article>
+        <article class="step"><h3>Как помочь кодом</h3><p>Перед PR запусти <code>python3 build_shadowrocket.py</code> и <code>python3 -m py_compile build_shadowrocket.py</code>.</p><div class="links-row"><a class="button" href="https://github.com/lemonchikHere/roscomvpn-shadowrocket/blob/main/CONTRIBUTING.md">CONTRIBUTING</a></div></article>
+      </div>
+    </section>
+
+    <section class="shell section reveal">
+      <div class="section-title">
+        <h2>Последние изменения</h2>
+        <p>Короткая сводка из changelog.</p>
+      </div>
+      <div class="faq">
+        <details open><summary>Текущее</summary><p>Русская GitHub Pages страница, отдельные Instagram и Facebook/Meta rule-set'ы, plain/system DNS вместо DoH-over-IP, Telegram через Proxy с force-remote-dns и отдельными IP-сетями.</p></details>
+        <details><summary>Первый релиз</summary><p>RoscomVPN routing sources конвертируются в Shadowrocket-compatible конфиги; опубликованы основной RULE-SET профиль и отладочные варианты; добавлен workflow автосборки.</p></details>
+      </div>
+      <div class="links-row">
+        <a class="button" href="https://github.com/lemonchikHere/roscomvpn-shadowrocket/blob/main/CHANGELOG.md">CHANGELOG</a>
+        <a class="button" href="https://github.com/lemonchikHere/roscomvpn-shadowrocket">Репозиторий</a>
+        <a class="button" href="https://lemonchikhere.github.io/roscomvpn-shadowrocket/">GitHub Pages</a>
+      </div>
+    </section>
+
+    <section class="shell section reveal">
+      <div class="notice">
+        <p>Важно: репозиторий содержит только маршрутизацию. Тут нет VPN-серверов, подписок, ключей, VLESS/VMess/Reality-конфигов и любых приватных доступов.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <a href="https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf">raw config</a>
+      · <a href="https://github.com/lemonchikHere/roscomvpn-shadowrocket">repo</a>
+      · <a href="https://lemonchikhere.github.io/roscomvpn-shadowrocket/">pages</a>
+      · <a href="https://folivpn.org/">Foli VPN</a>
+    </div>
+  </footer>
+
+  <script>
+    const configUrl = "https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf";
+    const status = document.getElementById("copy-status");
+    const defaultLabels = new WeakMap();
+
+    async function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.top = "-1000px";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      if (!ok) throw new Error("copy failed");
+      return true;
+    }
+
+    document.querySelectorAll("[data-copy]").forEach((button) => {
+      defaultLabels.set(button, button.textContent);
+      button.addEventListener("click", async () => {
+        try {
+          await copyText(button.dataset.copy || configUrl);
+          button.textContent = "Скопировано";
+          if (status) status.textContent = "URL основного конфига скопирован. Вставь его в импорт Shadowrocket.";
+        } catch (error) {
+          button.textContent = defaultLabels.get(button);
+          if (status) status.textContent = "Не удалось скопировать автоматически — открой raw config и скопируй ссылку вручную.";
+        } finally {
+          window.setTimeout(() => {
+            button.textContent = defaultLabels.get(button);
+          }, 1500);
+        }
+      });
+    });
+
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      document.querySelectorAll(".reveal").forEach((element) => observer.observe(element));
+    } else {
+      document.querySelectorAll(".reveal").forEach((element) => element.classList.add("visible"));
+    }
+  </script>
+</body>
+</html>
