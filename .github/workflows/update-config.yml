@@ -1,0 +1,46 @@
+name: Update Shadowrocket Config
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - "build_shadowrocket.py"
+      - ".github/workflows/update-config.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Build config
+        run: python build_shadowrocket.py
+
+      - name: Check generated files
+        run: python -m py_compile build_shadowrocket.py
+
+      - name: Commit updates
+        run: |
+          if git diff --quiet -- roscomvpn-shadowrocket.conf roscomvpn-shadowrocket-expanded.conf roscomvpn-shadowrocket-with-process.conf rules; then
+            echo "No generated changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add roscomvpn-shadowrocket.conf roscomvpn-shadowrocket-expanded.conf roscomvpn-shadowrocket-with-process.conf rules
+          git commit -m "Update generated Shadowrocket config"
+          git push

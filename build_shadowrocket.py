@@ -20,6 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 OUT_CONF = ROOT / "roscomvpn-shadowrocket.conf"
+OUT_EXPANDED_CONF = ROOT / "roscomvpn-shadowrocket-expanded.conf"
 OUT_PROCESS_CONF = ROOT / "roscomvpn-shadowrocket-with-process.conf"
 OUT_RULES_DIR = ROOT / "rules"
 
@@ -31,10 +32,13 @@ SHADOWROCKET_DISCORD_URL = "https://raw.githubusercontent.com/blackmatrix7/ios_r
 ROSCOMVPN_ROUTING_URL = "https://raw.githubusercontent.com/hydraponique/roscomvpn-routing/main/MIHOMO/default.yaml"
 
 PROXY_OPTION = "force-remote-dns"
+PROXY_POLICY = "Proxy"
 BLOCK_POLICY = "REJECT-DROP"
 QUIC_BLOCK_RULE = "AND,((PROTOCOL,UDP),(DST-PORT,443)),REJECT-NO-DROP"
 FETCH_CACHE: dict[str, str] = {}
 POLICIES = {"DIRECT", "PROXY", "REJECT", "REJECT-DROP", "REJECT-NO-DROP"}
+REPO_RAW_BASE = "https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main"
+POLICIES.add(PROXY_POLICY)
 
 
 @dataclass(frozen=True)
@@ -43,22 +47,24 @@ class Step:
     name: str
     policy: str
     url: str | None = None
+    no_resolve: bool = False
+    remote_options: tuple[str, ...] = ()
 
 
 ORDER = [
-    Step("ip", "private-ips", "DIRECT", f"{GEOIP_BASE}/private.txt"),
-    Step("raw", "ipv6-leak-guard", BLOCK_POLICY),
+    Step("ip", "private-ips", "DIRECT", f"{GEOIP_BASE}/private.txt", no_resolve=True),
+    Step("raw", "ipv6-leak-guard", BLOCK_POLICY, no_resolve=True),
     Step("raw", "quic-udp-443", "REJECT-NO-DROP"),
     Step("geosite", "private-domains", "DIRECT", f"{GEOSITE_BASE}/private"),
     Step("geosite", "category-ads", BLOCK_POLICY, f"{GEOSITE_BASE}/category-ads"),
     Step("geosite", "win-spy", BLOCK_POLICY, f"{GEOSITE_BASE}/win-spy"),
     Step("geosite", "torrent-domains", "DIRECT", f"{GEOSITE_BASE}/torrent"),
-    Step("geosite", "google-play", "PROXY", f"{GEOSITE_BASE}/google-play"),
-    Step("geosite", "twitch-ads", "PROXY", f"{GEOSITE_BASE}/twitch-ads"),
-    Step("geosite", "youtube", "PROXY", f"{GEOSITE_BASE}/youtube"),
-    Step("geosite", "telegram", "PROXY", f"{GEOSITE_BASE}/telegram"),
-    Step("geosite", "github", "PROXY", f"{GEOSITE_BASE}/github"),
-    Step("shadowrocket-list", "discord-macos-addon", "PROXY", SHADOWROCKET_DISCORD_URL),
+    Step("geosite", "google-play", PROXY_POLICY, f"{GEOSITE_BASE}/google-play"),
+    Step("geosite", "twitch-ads", PROXY_POLICY, f"{GEOSITE_BASE}/twitch-ads"),
+    Step("geosite", "youtube", PROXY_POLICY, f"{GEOSITE_BASE}/youtube"),
+    Step("geosite", "telegram", PROXY_POLICY, f"{GEOSITE_BASE}/telegram"),
+    Step("geosite", "github", PROXY_POLICY, f"{GEOSITE_BASE}/github"),
+    Step("shadowrocket-list", "discord-macos-addon", PROXY_POLICY, SHADOWROCKET_DISCORD_URL),
     Step("geosite", "epicgames", "DIRECT", f"{GEOSITE_BASE}/epicgames"),
     Step("geosite", "origin", "DIRECT", f"{GEOSITE_BASE}/origin"),
     Step("geosite", "riot", "DIRECT", f"{GEOSITE_BASE}/riot"),
@@ -123,7 +129,7 @@ def with_policy(rule: str, policy: str) -> str:
 
 
 def attach_shadowrocket_options(rule: str, policy: str) -> str:
-    if policy != "PROXY":
+    if policy != PROXY_POLICY:
         return rule
     rule_type = rule.split(",", 1)[0]
     if rule_type in {"DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "DOMAIN-WILDCARD"}:
@@ -169,7 +175,7 @@ def parse_ip(text: str, policy: str) -> list[str]:
         if not line:
             continue
         ipaddress.ip_network(line, strict=False)
-        rules.append(f"IP-CIDR,{line},{policy},no-resolve")
+        rules.append(f"IP-CIDR,{line},{policy}")
     return rules
 
 
@@ -211,7 +217,10 @@ def rules_for_step(step: Step, include_process: bool, skipped: list[str]) -> lis
     if step.source_type == "geosite":
         return parse_geosite(text, step.policy, skipped)
     if step.source_type == "ip":
-        return parse_ip(text, step.policy)
+        rules = parse_ip(text, step.policy)
+        if step.no_resolve:
+            return [f"{rule},no-resolve" for rule in rules]
+        return rules
     if step.source_type == "classical":
         return parse_classical(text, step.policy, include_process)
     if step.source_type == "shadowrocket-list":
@@ -225,7 +234,7 @@ def build_config(include_process: bool) -> tuple[str, dict[str, int | str | list
     seen: set[str] = set()
     lines = [
         "# RoscomVPN routing for Shadowrocket",
-        f"# Generated: {generated}",
+        "# Generated from live upstream text sources by build_shadowrocket.py",
         f"# Source profile: {ROSCOMVPN_ROUTING_URL}",
         "# Notes: generated from text sources because Shadowrocket does not import Mihomo .mrs providers directly.",
         "# Default behavior: RU/BY and known local services go DIRECT; YouTube/Telegram/GitHub/Discord go PROXY; ads/telemetry are blocked; everything else goes PROXY.",
@@ -253,10 +262,47 @@ def build_config(include_process: bool) -> tuple[str, dict[str, int | str | list
 
     lines.append("")
     lines.append("# fallback")
-    lines.append("FINAL,PROXY")
+    lines.append(f"FINAL,{PROXY_POLICY}")
     counts["rules"] = int(counts["rules"]) + 1
     counts["skipped_regex"] = skipped
     return "\n".join(lines) + "\n", counts
+
+
+def build_ruleset_config() -> str:
+    lines = [
+        "# RoscomVPN routing for Shadowrocket",
+        "# Lightweight RULE-SET profile generated by build_shadowrocket.py",
+        f"# Source profile: {ROSCOMVPN_ROUTING_URL}",
+        "# Import this URL in Shadowrocket:",
+        f"# {REPO_RAW_BASE}/roscomvpn-shadowrocket.conf",
+        "",
+        GENERAL.rstrip(),
+        "",
+        "[Rule]",
+    ]
+
+    for step in ORDER:
+        if step.name == "ipv6-leak-guard":
+            lines.append("")
+            lines.append("# ipv6-leak-guard -> REJECT-DROP")
+            lines.append(f"IP-CIDR,::/0,{BLOCK_POLICY},no-resolve")
+            continue
+        if step.name == "quic-udp-443":
+            lines.append("")
+            lines.append("# quic-udp-443 -> REJECT-NO-DROP")
+            lines.append(QUIC_BLOCK_RULE)
+            continue
+
+        options = ",".join(step.remote_options)
+        suffix = f",{options}" if options else ""
+        lines.append("")
+        lines.append(f"# {step.name} -> {step.policy}")
+        lines.append(f"RULE-SET,{REPO_RAW_BASE}/rules/{step.name}.list,{step.policy}{suffix}")
+
+    lines.append("")
+    lines.append("# fallback")
+    lines.append(f"FINAL,{PROXY_POLICY}")
+    return "\n".join(lines) + "\n"
 
 
 def write_rule_files() -> int:
@@ -283,16 +329,19 @@ def write_rule_files() -> int:
 
 def main() -> int:
     try:
-        config, counts = build_config(include_process=False)
+        ruleset_config = build_ruleset_config()
+        expanded_config, counts = build_config(include_process=False)
         process_config, process_counts = build_config(include_process=True)
-        OUT_CONF.write_text(config, encoding="utf-8")
+        OUT_CONF.write_text(ruleset_config, encoding="utf-8")
+        OUT_EXPANDED_CONF.write_text(expanded_config, encoding="utf-8")
         OUT_PROCESS_CONF.write_text(process_config, encoding="utf-8")
         rule_file_count = write_rule_files()
     except Exception as exc:
         print(f"build failed: {exc}", file=sys.stderr)
         return 1
 
-    print(f"wrote {OUT_CONF} ({counts['rules']} rules, process rules {counts['process_rules']})")
+    print(f"wrote {OUT_CONF} (lightweight RULE-SET profile)")
+    print(f"wrote {OUT_EXPANDED_CONF} ({counts['rules']} rules, process rules {counts['process_rules']})")
     print(f"wrote {OUT_PROCESS_CONF} ({process_counts['rules']} rules, process rules {process_counts['process_rules']})")
     print(f"wrote {OUT_RULES_DIR} ({rule_file_count} rule-file entries)")
     skipped = counts["skipped_regex"]
