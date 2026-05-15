@@ -1,65 +1,115 @@
-# RoscomVPN Routing for Shadowrocket
+<p align="center">
+  <strong>RoscomVPN Routing for Shadowrocket</strong>
+</p>
 
-Shadowrocket-совместимая сборка RoscomVPN DEFAULT routing для macOS/iOS.
+<p align="center">
+  Готовая маршрутизация для Shadowrocket на macOS и iOS, собранная из источников RoscomVPN.
+  <br>
+  RU/BY и локальные сервисы идут напрямую. YouTube, Telegram, Instagram, GitHub, Discord и остальной внешний трафик идут через выбранный `Proxy`.
+</p>
 
-Готовая маршрутизация под Shadowrocket на macOS, собранная из:
+<p align="center">
+  <a href="https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf"><strong>Скопировать основной конфиг</strong></a>
+  ·
+  <a href="https://lemonchikhere.github.io/roscomvpn-shadowrocket/">Красивая страница</a>
+  ·
+  <a href="#установка">Установка</a>
+  ·
+  <a href="#если-что-то-не-работает">Если что-то не работает</a>
+</p>
 
-- `hydraponique/roscomvpn-routing` DEFAULT-профиля для Mihomo
-- `hydraponique/roscomvpn-geosite` текстовых geosite-источников
-- `hydraponique/roscomvpn-geoip` текстового `direct.txt`/`private.txt`
-- небольшого Shadowrocket-аддона для Discord, потому что в RoscomVPN DEFAULT Discord задан через Windows process rules
+---
+
+## Какой файл ставить
+
+Ставь основной легкий профиль:
+
+```text
+https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf
+```
+
+Не начинай с `roscomvpn-shadowrocket-expanded.conf`, если просто хочешь пользоваться VPN. `expanded` нужен для отладки: он огромный и полностью разворачивает все правила в один файл. Основной конфиг маленький, читабельный и подтягивает `rules/*.list` через `RULE-SET`.
+
+## Что делает конфиг
+
+| Маршрут | Что туда попадает |
+| --- | --- |
+| `DIRECT` | Приватные сети, RU/BY IP, российские сервисы, банки, Apple, Microsoft, Steam, Epic, Riot, Escape from Tarkov, Faceit, Twitch, Pinterest, torrent-клиенты и локальные домены. |
+| `Proxy` | YouTube, Telegram, Instagram, Facebook/Meta, GitHub, Google Play, Twitch ads, Discord и весь остальной трафик, который не совпал с direct-правилами. |
+| `REJECT-DROP` | Рекламные категории, Windows telemetry и IPv6 leak guard. |
+
+Telegram покрыт двумя слоями: домены идут через `Proxy` с `force-remote-dns`, а известные Telegram IP-сети идут через `Proxy` с `no-resolve`.
+
+Instagram и Facebook/Meta вынесены отдельными rule-set'ами выше `direct-ips`, чтобы мобильное приложение не разваливалось на CDN и Meta-инфраструктуре.
+
+DNS намеренно обычный/system:
+
+```conf
+dns-server = system,77.88.8.8,1.1.1.1,8.8.8.8
+fallback-dns-server = system,1.1.1.1,8.8.8.8
+```
+
+Так мы избегаем бага Shadowrocket на macOS/iOS, когда DoH-over-IP вроде `https://77.88.8.8/dns-query` закрывается или таймаутится и ломает резолвинг вообще для всех приложений.
+
+## Установка
+
+1. Открой Shadowrocket.
+2. Импортируй основной URL выше.
+3. Включи режим маршрутизации `Rule`.
+4. Выбери свой рабочий сервер/подписку как активный `Proxy`.
+5. Удали старые импортированные копии этого конфига, если Shadowrocket продолжает использовать закешированный `.db`.
+
+Важно: репозиторий содержит только маршрутизацию. Тут нет VPN-серверов, подписок, ключей, VLESS/VMess/Reality-конфигов и любых приватных доступов.
 
 ## Файлы
 
-- `roscomvpn-shadowrocket.conf` - основной импортируемый профиль через `RULE-SET`. Ставь его первым.
-- `roscomvpn-shadowrocket-expanded.conf` - тот же профиль, но развернутый в один большой файл для отладки.
-- `roscomvpn-shadowrocket-with-process.conf` - вариант с `PROCESS-NAME`/`PROCESS-NAME-REGEX` из апстрима. Используй только если твоя версия Shadowrocket принимает process rules.
-- `rules/*.list` - разложенные rule-set файлы для проверки/хостинга.
-- `build_shadowrocket.py` - генератор. Перезапускай его, чтобы подтянуть свежие списки.
+| Файл | Для чего |
+| --- | --- |
+| `roscomvpn-shadowrocket.conf` | Основной импортируемый профиль. Ставь его. |
+| `roscomvpn-shadowrocket-expanded.conf` | Полностью развернутый отладочный профиль, примерно 37k правил. |
+| `roscomvpn-shadowrocket-with-process.conf` | Отладочный профиль с process rules из upstream. Используй только если твоя версия Shadowrocket принимает `PROCESS-NAME`. |
+| `rules/*.list` | Rule-set файлы, которые основной профиль подтягивает по URL. |
+| `build_shadowrocket.py` | Генератор, который пересобирает конфиги из upstream-источников. |
+| `.github/workflows/update-config.yml` | Автосборка на GitHub Actions. Работает, когда Actions включены у репозитория/аккаунта. |
 
-## Быстрые ссылки
-
-- Основной конфиг: `https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf`
-- Развернутый конфиг: `https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket-expanded.conf`
-- Вариант с process rules: `https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket-with-process.conf`
-
-## Автообновление
-
-GitHub Actions запускает `build_shadowrocket.py` каждые 6 часов и вручную через `workflow_dispatch`.
-Если upstream-списки реально изменились, action коммитит обновленные `*.conf` и `rules/*.list`.
-Если изменений нет, коммит не создается.
-
-## Логика
-
-- `DIRECT`: приватные сети, RU/BY IP, RU/банковские/локальные домены, Apple, Microsoft, Steam/Epic/Riot/EFT/FaceIT, Twitch, Pinterest, torrent-клиенты/домены.
-- `PROXY`: YouTube, Telegram, GitHub, Google Play, Twitch ads, Discord domain addon, весь остальной интернет.
-- Для `PROXY`-доменов включается `force-remote-dns`; Telegram дополнительно идет через явные IP-сети `91.108.*`, `109.239.140.0/24`, `149.154.160.0/20`.
-- `BLOCK`: рекламные категории, Windows telemetry, весь IPv6 как в апстриме против утечек.
-- QUIC/HTTP3 UDP 443 блокируется правилом `AND,((PROTOCOL,UDP),(DST-PORT,443)),REJECT-NO-DROP`, чтобы YouTube и Google чаще откатывались на TCP.
-- DNS намеренно plain/system (`system`, `77.88.8.8`, `1.1.1.1`, `8.8.8.8`), без DoH-over-IP. В Shadowrocket на macOS DoH вида `https://77.88.8.8/dns-query` может закрываться/таймаутиться и ломать резолвинг.
-
-## Как поставить в Shadowrocket на Mac
-
-1. Открой Shadowrocket.
-2. `Config` -> импорт из файла/iCloud Drive.
-3. Выбери `roscomvpn-shadowrocket.conf`.
-4. Включи режим `Rule`.
-5. Убедись, что твой рабочий VPN/proxy node выбран как основной `PROXY`.
-
-Не начинай с `expanded`-версии: она нужна для отладки. Для обычного использования ставь основной `roscomvpn-shadowrocket.conf`, он подтягивает rule-set файлы отдельно и легче обновляется.
-
-Важно: этот файл не содержит сам VPN-узел/подписку. Это только маршрутизация. Если Shadowrocket при импорте создал отдельный пустой профиль без нод, добавь туда свою подписку/сервер или перенеси секции `[General]` и `[Rule]` в уже рабочий профиль.
-
-Если после импорта Shadowrocket ругается на правило QUIC, открой конфиг и закомментируй строку:
-
-```conf
-AND,((PROTOCOL,UDP),(DST-PORT,443)),REJECT-NO-DROP
-```
-
-## Обновление
+## Локальная пересборка
 
 ```bash
 python3 build_shadowrocket.py
+python3 -m py_compile build_shadowrocket.py
 ```
 
-Генератор не трогает твои proxy nodes. Он собирает только маршрутизацию.
+Генератор переписывает только маршрутизацию. Он не трогает твои proxy nodes.
+
+## Автообновление
+
+GitHub workflow настроен на запуск:
+
+- вручную через `workflow_dispatch`
+- каждые 6 часов
+- после изменения `build_shadowrocket.py` или самого workflow
+
+Если upstream-списки изменились, workflow коммитит обновленные `*.conf` и `rules/*.list`. Если изменений нет, новый коммит не создается.
+
+## Если что-то не работает
+
+| Симптом | Что проверить |
+| --- | --- |
+| Telegram не грузится | Переимпортируй основной профиль, не `expanded`. Проверь, что есть `rules/telegram-ips.list`, и удали старые закешированные профили. |
+| Instagram на iPhone работает нестабильно | Переимпортируй последний основной профиль. В нем есть отдельные Instagram и Facebook/Meta rule-set'ы выше direct IP правил. |
+| В логах `dns-query` timeout/closed | Переимпортируй свежий конфиг. Текущий профиль больше не использует DoH-over-IP. |
+| YouTube нестабилен | Оставь QUIC rule включенным. Если твой Shadowrocket ругается на правило, закомментируй `AND,((PROTOCOL,UDP),(DST-PORT,443)),REJECT-NO-DROP`. |
+| Вообще ничего не идет через VPN | Это routing-only профиль. Нужно выбрать реальный VPN/proxy node как `Proxy`. |
+| Российские сервисы идут через VPN | Проверь, что используешь свежий профиль и что `rules/direct-ips.list` не содержит `no-resolve`. |
+
+## Источники
+
+- [hydraponique/roscomvpn-routing](https://github.com/hydraponique/roscomvpn-routing)
+- [hydraponique/roscomvpn-geosite](https://github.com/hydraponique/roscomvpn-geosite)
+- [hydraponique/roscomvpn-geoip](https://github.com/hydraponique/roscomvpn-geoip)
+- [Shadowrocket default config](https://raw.githubusercontent.com/Shadowrocket/config/master/default.conf)
+- [blackmatrix7 Shadowrocket rule lists](https://github.com/blackmatrix7/ios_rule_script/tree/master/rule/Shadowrocket)
+
+## Примечание
+
+Это compatibility layer для Shadowrocket. Upstream-списки принадлежат их авторам. Перед использованием в чувствительных окружениях лучше самостоятельно просмотреть сгенерированные правила.

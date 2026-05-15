@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Сначала импортировать свежий конфиг
+    url: https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf
+    about: Перед баг-репортом лучше переимпортировать последний основной профиль.

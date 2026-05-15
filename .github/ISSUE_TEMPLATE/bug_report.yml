@@ -1,0 +1,66 @@
+name: Баг маршрутизации
+description: Сообщить о проблеме с Shadowrocket routing или DNS.
+title: "[Баг]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Перед созданием issue переимпортируй последний основной конфиг:
+        https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main/roscomvpn-shadowrocket.conf
+  - type: input
+    id: platform
+    attributes:
+      label: Платформа
+      description: Версия macOS или iOS.
+      placeholder: "macOS 15.x, iOS 18.x"
+    validations:
+      required: true
+  - type: input
+    id: shadowrocket
+    attributes:
+      label: Версия Shadowrocket
+      placeholder: "Build/version, если видно"
+    validations:
+      required: true
+  - type: dropdown
+    id: config
+    attributes:
+      label: Какой конфиг импортирован
+      options:
+        - roscomvpn-shadowrocket.conf
+        - roscomvpn-shadowrocket-expanded.conf
+        - roscomvpn-shadowrocket-with-process.conf
+        - Другой/измененный
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Что не работает
+      placeholder: "Telegram, Instagram, youtube.com, github.com"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Как должно быть
+      placeholder: "Что ожидалось?"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Что происходит
+      placeholder: "Что происходит вместо этого?"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Кусок PacketTunnel-лога
+      description: Вставь только релевантные строки рядом с ошибкой.
+      render: text
+    validations:
+      required: false

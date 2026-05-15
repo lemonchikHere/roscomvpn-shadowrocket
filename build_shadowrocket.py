@@ -42,6 +42,17 @@ POLICIES = {"DIRECT", "PROXY", "REJECT", "REJECT-DROP", "REJECT-NO-DROP"}
 REPO_RAW_BASE = "https://raw.githubusercontent.com/lemonchikHere/roscomvpn-shadowrocket/main"
 POLICIES.add(PROXY_POLICY)
 
+FOLI_DIRECT_RULES = (
+    # Keep Foli control/landing hosts outside the tunnel.
+    # Otherwise a Foli-powered Shadowrocket session can loop while opening folivpn.org.
+    "DOMAIN-SUFFIX,folivpn.org,DIRECT",
+    "DOMAIN-SUFFIX,samosfi.ru,DIRECT",
+    "IP-CIDR,158.160.50.41/32,DIRECT,no-resolve",
+    "IP-CIDR,164.68.115.95/32,DIRECT,no-resolve",
+    "IP-CIDR,5.129.253.108/32,DIRECT,no-resolve",
+)
+
+
 TELEGRAM_IP_RANGES = (
     "91.108.4.0/22",
     "91.108.8.0/22",
@@ -66,6 +77,7 @@ class Step:
 
 ORDER = [
     Step("ip", "private-ips", "DIRECT", f"{GEOIP_BASE}/private.txt", no_resolve=True),
+    Step("inline", "foli-infra", "DIRECT"),
     Step("raw", "ipv6-leak-guard", BLOCK_POLICY, no_resolve=True),
     Step("raw", "quic-udp-443", "REJECT-NO-DROP"),
     Step("geosite", "private-domains", "DIRECT", f"{GEOSITE_BASE}/private"),
@@ -101,8 +113,8 @@ ORDER = [
 
 GENERAL = """[General]
 bypass-system = true
-skip-proxy = 127.0.0.1,localhost,*.local,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
-bypass-tun = 10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,172.16.0.0/12,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,192.168.0.0/16,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24,224.0.0.0/3
+skip-proxy = 127.0.0.1,localhost,*.local,folivpn.org,*.folivpn.org,samosfi.ru,*.samosfi.ru,158.160.50.41,164.68.115.95,5.129.253.108,10.0.0.0/8,100.64.0.0/10,172.16.0.0/12,192.168.0.0/16
+bypass-tun = 10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,158.160.50.41/32,164.68.115.95/32,5.129.253.108/32,169.254.0.0/16,172.16.0.0/12,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,192.168.0.0/16,198.18.0.0/15,198.51.100.0/24,203.0.113.0/24,224.0.0.0/3
 dns-server = system,77.88.8.8,1.1.1.1,8.8.8.8
 fallback-dns-server = system,1.1.1.1,8.8.8.8
 ipv6 = false
@@ -228,6 +240,8 @@ def rules_for_step(step: Step, include_process: bool, skipped: list[str]) -> lis
         return [f"IP-CIDR,::/0,{BLOCK_POLICY},no-resolve"]
     if step.name == "quic-udp-443":
         return [QUIC_BLOCK_RULE]
+    if step.name == "foli-infra":
+        return list(FOLI_DIRECT_RULES)
     if step.name == "telegram-ips":
         rules = [f"IP-CIDR,{cidr},{step.policy}" for cidr in TELEGRAM_IP_RANGES]
         if step.no_resolve:
@@ -247,6 +261,8 @@ def rules_for_step(step: Step, include_process: bool, skipped: list[str]) -> lis
         return parse_classical(text, step.policy, include_process)
     if step.source_type == "shadowrocket-list":
         return parse_shadowrocket_list(text, step.policy)
+    if step.source_type == "inline":
+        return list(FOLI_DIRECT_RULES)
     raise ValueError(f"Unknown step type: {step.source_type}")
 
 
@@ -304,6 +320,11 @@ def build_ruleset_config() -> str:
     ]
 
     for step in ORDER:
+        if step.name == "foli-infra":
+            lines.append("")
+            lines.append("# foli-infra -> DIRECT")
+            lines.extend(FOLI_DIRECT_RULES)
+            continue
         if step.name == "ipv6-leak-guard":
             lines.append("")
             lines.append("# ipv6-leak-guard -> REJECT-DROP")
@@ -331,7 +352,7 @@ def write_rule_files() -> int:
     OUT_RULES_DIR.mkdir(exist_ok=True)
     total = 0
     for step in ORDER:
-        if step.source_type == "raw":
+        if step.source_type in {"raw", "inline"}:
             continue
         skipped: list[str] = []
         rules = rules_for_step(step, include_process=True, skipped=skipped)
