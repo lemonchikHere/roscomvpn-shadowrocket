@@ -29,6 +29,8 @@ GEOIP_BASE = "https://raw.githubusercontent.com/hydraponique/roscomvpn-geoip/rel
 CUSTOM_BASE = "https://raw.githubusercontent.com/roscomvpn/custom-category/release/mihomo"
 TORRENT_CLIENTS_URL = "https://raw.githubusercontent.com/legiz-ru/mihomo-rule-sets/main/other/torrent-clients.yaml"
 SHADOWROCKET_DISCORD_URL = "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Discord/Discord.list"
+SHADOWROCKET_INSTAGRAM_URL = "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Instagram/Instagram.list"
+SHADOWROCKET_FACEBOOK_URL = "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Shadowrocket/Facebook/Facebook.list"
 ROSCOMVPN_ROUTING_URL = "https://raw.githubusercontent.com/hydraponique/roscomvpn-routing/main/MIHOMO/default.yaml"
 
 PROXY_OPTION = "force-remote-dns"
@@ -67,16 +69,18 @@ ORDER = [
     Step("raw", "ipv6-leak-guard", BLOCK_POLICY, no_resolve=True),
     Step("raw", "quic-udp-443", "REJECT-NO-DROP"),
     Step("geosite", "private-domains", "DIRECT", f"{GEOSITE_BASE}/private"),
-    Step("geosite", "category-ads", BLOCK_POLICY, f"{GEOSITE_BASE}/category-ads"),
-    Step("geosite", "win-spy", BLOCK_POLICY, f"{GEOSITE_BASE}/win-spy"),
-    Step("geosite", "torrent-domains", "DIRECT", f"{GEOSITE_BASE}/torrent"),
     Step("geosite", "google-play", PROXY_POLICY, f"{GEOSITE_BASE}/google-play", remote_options=(PROXY_OPTION,)),
     Step("geosite", "twitch-ads", PROXY_POLICY, f"{GEOSITE_BASE}/twitch-ads", remote_options=(PROXY_OPTION,)),
+    Step("shadowrocket-list", "instagram", PROXY_POLICY, SHADOWROCKET_INSTAGRAM_URL, remote_options=(PROXY_OPTION,)),
+    Step("shadowrocket-list", "facebook", PROXY_POLICY, SHADOWROCKET_FACEBOOK_URL, remote_options=(PROXY_OPTION,)),
     Step("geosite", "youtube", PROXY_POLICY, f"{GEOSITE_BASE}/youtube", remote_options=(PROXY_OPTION,)),
     Step("geosite", "telegram", PROXY_POLICY, f"{GEOSITE_BASE}/telegram", remote_options=(PROXY_OPTION,)),
     Step("static", "telegram-ips", PROXY_POLICY, no_resolve=True),
     Step("geosite", "github", PROXY_POLICY, f"{GEOSITE_BASE}/github", remote_options=(PROXY_OPTION,)),
     Step("shadowrocket-list", "discord-macos-addon", PROXY_POLICY, SHADOWROCKET_DISCORD_URL, remote_options=(PROXY_OPTION,)),
+    Step("geosite", "category-ads", BLOCK_POLICY, f"{GEOSITE_BASE}/category-ads"),
+    Step("geosite", "win-spy", BLOCK_POLICY, f"{GEOSITE_BASE}/win-spy"),
+    Step("geosite", "torrent-domains", "DIRECT", f"{GEOSITE_BASE}/torrent"),
     Step("geosite", "epicgames", "DIRECT", f"{GEOSITE_BASE}/epicgames"),
     Step("geosite", "origin", "DIRECT", f"{GEOSITE_BASE}/origin"),
     Step("geosite", "riot", "DIRECT", f"{GEOSITE_BASE}/riot"),
